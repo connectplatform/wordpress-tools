@@ -1,37 +1,77 @@
 #!/bin/bash
 
-echo "This script needs to be launched in the public www directory of the website we are about to restore on a new server."
+echo "Welcome to Sonoratek WP-transfer script."
+echo "This script is designed to effortlessly migrate a Wordpress-powered website to another host."
+echo "Select your desired action:"
+echo "1. Create a compressed archive copy of a wordpress website including its database."
+echo "2. Import a compressed archive copy from another server and restore files and database."
 
-# Prompt user for the site name
-read -p "Enter website URL that you are transferring (without https://): " sitename
+read -p "Enter your choice (1 or 2): " choice
 
-# Download the backup
-wget "https://${sitename}/${sitename}.tar.gz"
+case $choice in
+    1)
+        # Backup WordPress Site
+        read -p "Enter the site name for backup: " sitename
 
-# Extract the backup contents
-tar -xzvf "${sitename}.tar.gz"
+        # Extract database credentials from wp-config.php
+        db_name=$(grep DB_NAME wp-config.php | cut -d "'" -f 4)
+        db_user=$(grep DB_USER wp-config.php | cut -d "'" -f 4)
+        db_password=$(grep DB_PASSWORD wp-config.php | cut -d "'" -f 4)
+        db_host=$(grep DB_HOST wp-config.php | cut -d "'" -f 4)
 
-# Extract database credentials from wp-config.php
-db_name=$(grep DB_NAME wp-config.php | cut -d "'" -f 4)
-db_user=$(grep DB_USER wp-config.php | cut -d "'" -f 4)
-db_password=$(grep DB_PASSWORD wp-config.php | cut -d "'" -f 4)
-db_host=$(grep DB_HOST wp-config.php | cut -d "'" -f 4)
+        # Dump the database
+        mysqldump -h $db_host -u $db_user -p$db_password $db_name > db_backup.sql
 
-# Ask for MySQL root password
-read -sp "Enter MySQL root password for $db_host: " root_password
-echo ""
+        # Compress the database dump
+        tar -czvf db_backup.tar.gz db_backup.sql
 
-# Log in to MySQL and create the database, user, and assign privileges
-mysql -u root -p$root_password -h $db_host -e "
-CREATE DATABASE IF NOT EXISTS $db_name;
-CREATE USER IF NOT EXISTS '$db_user'@'%' IDENTIFIED BY '$db_password';
-GRANT ALL PRIVILEGES ON $db_name.* TO '$db_user'@'%';
-FLUSH PRIVILEGES;"
+        # Remove the uncompressed database dump
+        rm db_backup.sql
 
-# Extract the database backup
-tar -xzvf db_backup.tar.gz
+        # Compress the entire WordPress directory
+        tar -czvf "${sitename}.tar.gz" .
 
-# Import the database
-mysql -u $db_user -p$db_password $db_name < db_backup.sql
+        echo "Backup of $sitename completed."
+        ;;
+    2)
+        # Restore WordPress Site
+        echo "This script needs to be launched in the public www directory of the website we are about to restore on a new server."
+        read -p "Enter website URL that you are transferring (without https://): " sitename
 
-echo "Restoration of $sitename completed."
+        # Download the backup
+        wget "https://${sitename}/${sitename}.tar.gz"
+
+        # Extract the backup contents
+        tar -xzvf "${sitename}.tar.gz"
+
+        # Extract database credentials from wp-config.php
+        db_name=$(grep DB_NAME wp-config.php | cut -d "'" -f 4)
+        db_user=$(grep DB_USER wp-config.php | cut -d "'" -f 4)
+        db_password=$(grep DB_PASSWORD wp-config.php | cut -d "'" -f 4)
+        db_host=$(grep DB_HOST wp-config.php | cut -d "'" -f 4)
+
+        # Ask for MySQL root password
+        read -sp "Enter MySQL root password for $db_host: " root_password
+        echo ""
+
+        # Log in to MySQL and create the database, user, and assign privileges
+        mysql -u root -p$root_password -h $db_host -e "
+        CREATE DATABASE IF NOT EXISTS $db_name;
+        CREATE USER IF NOT EXISTS '$db_user'@'%' IDENTIFIED BY '$db_password';
+        GRANT ALL PRIVILEGES ON $db_name.* TO '$db_user'@'%';
+        FLUSH PRIVILEGES;"
+
+        # Extract the database backup
+        tar -xzvf db_backup.tar.gz
+
+        # Import the database
+        mysql -u $db_user -p$db_password $db_name < db_backup.sql
+
+        echo "Restoration of $sitename completed."
+        ;;
+    *)
+        echo "Invalid option, select 1 or 2"
+        read -p "Press any key to continue..." key
+        exec $0
+        ;;
+esac
