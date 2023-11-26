@@ -23,13 +23,22 @@ case $choice in
         mysqldump -h $db_host -u $db_user -p$db_password $db_name > db_backup.sql
 
         # Compress the database dump
-        tar -czvf db_backup.tar.gz db_backup.sql
+        tar -czf db_backup.tar.gz db_backup.sql
 
         # Remove the uncompressed database dump
         rm db_backup.sql
 
-        # Compress the entire WordPress directory
-        tar -czvf "${sitename}.tar.gz" .
+        # Compress the entire WordPress directory, excluding the tarball itself
+        # Check if 'pv' is installed for progress indication
+        if command -v pv > /dev/null 2>&1; then
+            tar --exclude="${sitename}.tar.gz" -czf - . | pv -s $(du -sb . | awk '{print $1}') > "${sitename}.tar.gz"
+        else
+            echo "Compressing files, please wait..."
+            tar --exclude="${sitename}.tar.gz" -czf "${sitename}.tar.gz" .
+        fi
+
+        # Delete the database archive after successful creation of sitename.tar.gz
+        rm db_backup.tar.gz
 
         echo "Backup of $sitename completed."
         ;;
@@ -66,6 +75,9 @@ case $choice in
 
         # Import the database
         mysql -u $db_user -p$db_password $db_name < db_backup.sql
+
+        # Delete the downloaded and extracted backup files
+        rm "${sitename}.tar.gz" db_backup.tar.gz
 
         echo "Restoration of $sitename completed."
         ;;
