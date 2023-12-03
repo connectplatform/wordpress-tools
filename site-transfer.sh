@@ -17,30 +17,43 @@ case $choice in
         db_name=$(grep DB_NAME wp-config.php | cut -d "'" -f 4)
         db_user=$(grep DB_USER wp-config.php | cut -d "'" -f 4)
         db_password=$(grep DB_PASSWORD wp-config.php | cut -d "'" -f 4)
-        db_host=$(grep DB_HOST wp-config.php | cut -d "'" -f 4)
+        db_host=$(grep DB_HOST wp-config.php | cut -d "'" -f 4 | cut -d ":" -f 1)
+        db_port=$(grep DB_HOST wp-config.php | cut -d ":" -f 2)
 
-        # Dump the database
-        mysqldump -h $db_host -u $db_user -p$db_password $db_name > db_backup.sql
-
-        # Compress the database dump
-        tar -czf db_backup.tar.gz db_backup.sql
-
-        # Remove the uncompressed database dump
-        rm db_backup.sql
-
-        # Compress the entire WordPress directory, excluding the tarball itself
-        # Check if 'pv' is installed for progress indication
-        if command -v pv > /dev/null 2>&1; then
-            tar --exclude="${sitename}.tar.gz" -czf - . | pv -s $(du -sb . | awk '{print $1}') > "${sitename}.tar.gz"
-        else
-            echo "Compressing files, please wait..."
-            tar --exclude="${sitename}.tar.gz" -czf "${sitename}.tar.gz" .
+        # Check if a port number is available
+        if [ -z "$db_port" ]; then
+            # No port number found, default to 3306
+            db_port=3306
         fi
 
-        # Delete the database archive after successful creation of sitename.tar.gz
-        rm db_backup.tar.gz
+        # Dump the database
+        mysqldump -h $db_host -P $db_port -u $db_user -p$db_password $db_name > db_backup.sql
 
-        echo "Backup of $sitename completed."
+        # Check if mysqldump was successful
+        if [ $? -eq 0 ]; then
+            echo "Database dumped successfully."
+            # Compress the database dump
+            tar -czvf db_backup.tar.gz db_backup.sql
+
+            # Remove the uncompressed database dump
+            rm db_backup.sql
+
+            # Compress the entire WordPress directory, excluding the tarball itself
+            # Check if 'pv' is installed for progress indication
+            if command -v pv > /dev/null 2>&1; then
+                tar --exclude="${sitename}.tar.gz" -czf - . | pv -s $(du -sb . | awk '{print $1}') > "${sitename}.tar.gz"
+            else
+                echo "Compressing files, please wait..."
+                tar --exclude="${sitename}.tar.gz" -czf "${sitename}.tar.gz" .
+            fi
+
+            # Delete the database archive after successful creation of sitename.tar.gz
+            rm db_backup.tar.gz
+
+            echo "Backup of $sitename completed."
+        else
+            echo "Failed to dump database, please check the credentials and try again."
+        fi
         ;;
     2)
         # Restore WordPress Site
