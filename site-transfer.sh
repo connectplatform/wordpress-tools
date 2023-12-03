@@ -18,7 +18,7 @@ case $choice in
         db_user=$(grep DB_USER wp-config.php | cut -d "'" -f 4)
         db_password=$(grep DB_PASSWORD wp-config.php | cut -d "'" -f 4)
         db_host=$(grep DB_HOST wp-config.php | cut -d "'" -f 4 | cut -d ":" -f 1)
-        db_port=$(grep DB_HOST wp-config.php | cut -d ":" -f 2)
+        db_port=$(grep DB_HOST wp-config.php | cut -d ":" -f 2 | tr -d "'")
 
         # Check if a port number is available
         if [ -z "$db_port" ]; then
