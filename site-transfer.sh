@@ -91,6 +91,9 @@ case $choice in
         # Delete the downloaded and extracted backup files
         rm "${sitename}.tar.gz" db_backup.tar.gz
 
+        # Remove the uncompressed database dump
+        rm db_backup.sql
+
         echo "Restoration of $sitename completed."
         ;;
     *)
