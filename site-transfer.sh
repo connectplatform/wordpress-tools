@@ -14,11 +14,12 @@ case $choice in
         read -p "Enter the site name for backup: " sitename
 
         # Extract database credentials from wp-config.php
-        db_name=$(grep DB_NAME wp-config.php | cut -d "'" -f 4)
-        db_user=$(grep DB_USER wp-config.php | cut -d "'" -f 4)
-        db_password=$(grep DB_PASSWORD wp-config.php | cut -d "'" -f 4)
-        db_host=$(grep DB_HOST wp-config.php | cut -d "'" -f 4 | cut -d ":" -f 1)
-        db_port=$(grep DB_HOST wp-config.php | cut -d ":" -f 2 | tr -d "'")
+        # Use a more precise method to extract the values to avoid any trailing characters
+        db_name=$(awk -F"'" '/DB_NAME/{print $4}' wp-config.php)
+        db_user=$(awk -F"'" '/DB_USER/{print $4}' wp-config.php)
+        db_password=$(awk -F"'" '/DB_PASSWORD/{print $4}' wp-config.php)
+        db_host=$(awk -F"'" '/DB_HOST/{print $4}' wp-config.php | cut -d ":" -f 1)
+        db_port=$(awk -F"'" '/DB_HOST/{print $4}' wp-config.php | cut -d ":" -f 2 | tr -d "'")
 
         # Check if a port number is available
         if [ -z "$db_port" ]; then
@@ -27,7 +28,7 @@ case $choice in
         fi
 
         # Dump the database
-        mysqldump -h $db_host -P $db_port -u $db_user -p$db_password $db_name > db_backup.sql
+        mysqldump -h "$db_host" -P "$db_port" -u "$db_user" -p"$db_password" "$db_name" > db_backup.sql
 
         # Check if mysqldump was successful
         if [ $? -eq 0 ]; then
@@ -39,13 +40,8 @@ case $choice in
             rm db_backup.sql
 
             # Compress the entire WordPress directory, excluding the tarball itself
-            # Check if 'pv' is installed for progress indication
-            if command -v pv > /dev/null 2>&1; then
-                tar --exclude="${sitename}.tar.gz" -czf - . | pv -s $(du -sb . | awk '{print $1}') > "${sitename}.tar.gz"
-            else
-                echo "Compressing files, please wait..."
-                tar --exclude="${sitename}.tar.gz" -czf "${sitename}.tar.gz" .
-            fi
+            echo "Compressing files, please wait..."
+            tar --exclude="${sitename}.tar.gz" -czf "${sitename}.tar.gz" .
 
             # Delete the database archive after successful creation of sitename.tar.gz
             rm db_backup.tar.gz
