@@ -3,18 +3,16 @@
 echo "Welcome to Sonoratek WP-transfer script."
 echo "This script is designed to effortlessly migrate a Wordpress-powered website to another host."
 echo "Select your desired action:"
-echo "1. Create a compressed archive copy of a wordpress website including its database."
-echo "2. Import a compressed archive copy from another server and restore files and database."
+echo "1. Backup this wordpress website including its database."
+echo "2. Restore a wordpress archive from another server."
 
 read -p "Enter your choice (1 or 2): " choice
 
 case $choice in
     1)
         # Backup WordPress Site
-        read -p "Enter the site name for backup: " sitename
 
         # Extract database credentials from wp-config.php
-        # Use a more precise method to extract the values to avoid any trailing characters
         db_name=$(awk -F"'" '/DB_NAME/{print $4}' wp-config.php)
         db_user=$(awk -F"'" '/DB_USER/{print $4}' wp-config.php)
         db_password=$(awk -F"'" '/DB_PASSWORD/{print $4}' wp-config.php)
@@ -33,6 +31,11 @@ case $choice in
         # Check if mysqldump was successful
         if [ $? -eq 0 ]; then
             echo "Database dumped successfully."
+
+            # Extract the site name from the SQL dump file
+            # This command assumes that the 'siteurl' is stored in a standard format in the SQL dump
+            sitename=$(grep "siteurl" db_backup.sql | awk -F"'" '{print $4}' | head -1 | awk -F"/" '{print $3}')
+
             # Compress the database dump
             tar -czvf db_backup.tar.gz db_backup.sql
 
@@ -41,7 +44,7 @@ case $choice in
 
             # Compress the entire WordPress directory, excluding the tarball itself
             echo "Compressing files, please wait..."
-            tar --exclude="${sitename}.tar.gz" -czf "${sitename}.tar.gz" .
+            tar --exclude="${sitename}.tar.gz" --exclude="site-transfer.sh" -czf "${sitename}.tar.gz" .
 
             # Delete the database archive after successful creation of sitename.tar.gz
             rm db_backup.tar.gz
