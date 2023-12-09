@@ -108,6 +108,8 @@ case $choice in
     # Generate a complex password using the defined function
     db_password=$(generate_password)
 
+    echo "Updating wp-config.php with the new database credentials"
+
     db_host=$(awk -F"'" '/DB_HOST/{print $4}' wp-config.php | cut -d ":" -f 1)
     db_port=$(awk -F"'" '/DB_HOST/{print $4}' wp-config.php | cut -d ":" -f 2 | tr -d "'")
 
@@ -139,21 +141,20 @@ case $choice in
         exit 1
     fi
 
-    # Update the wp-config.php with the new DB password and user
-    # Using | as a delimiter and escaping & and / characters in the password
-    escaped_db_password=$(printf '%s\n' "$db_password" | sed -e 's/[\/&]/\\&/g')
-    sed -i "s|define('DB_PASSWORD', '.*')|define('DB_PASSWORD', '$escaped_db_password')|" wp-config.php
-    if [ $? -ne 0 ]; then
-        echo "Failed to update DB_PASSWORD in wp-config.php. Exiting."
-        exit 1
-    fi
+    # Debugging: Check current DB_USER and DB_PASSWORD in wp-config.php
+    echo "Current DB_USER and DB_PASSWORD:"
+    grep "DB_USER" wp-config.php
+    grep "DB_PASSWORD" wp-config.php
 
-    escaped_db_user=$(printf '%s\n' "$db_user" | sed -e 's/[\/&]/\\&/g')
-    sed -i "s|define('DB_USER', '.*')|define('DB_USER', '$escaped_db_user')|" wp-config.php
-    if [ $? -ne 0 ]; then
-        echo "Failed to update DB_USER in wp-config.php. Exiting."
-        exit 1
-    fi
+    # Update the wp-config.php with the new DB password and user
+    # Using | as a delimiter
+    sed -i "s|define('DB_USER', '.*')|define('DB_USER', '$db_user')|" wp-config.php
+    sed -i "s|define('DB_PASSWORD', '.*')|define('DB_PASSWORD', '$db_password')|" wp-config.php
+
+    # Debugging: Check if DB_USER and DB_PASSWORD have been updated in wp-config.php
+    echo "Updated DB_USER and DB_PASSWORD:"
+    grep "DB_USER" wp-config.php
+    grep "DB_PASSWORD" wp-config.php
 
     # Extract the database backup
     tar -xzvf db_backup.tar.gz
