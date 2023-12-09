@@ -10,10 +10,25 @@ read -p "Enter your choice (1 or 2): " choice
 
 generate_password() {
     local length=16
-    local charset='A-Za-z0-9@#$%'
+    local num_upper=1
+    local num_lower=1
+    local num_digits=1
+    local num_special=1
 
-    # Generate password
-    local password=$(cat /dev/urandom | tr -dc "$charset" | fold -w ${length} | head -n 1)
+    # Required character sets
+    local upper_chars="ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    local lower_chars="abcdefghijklmnopqrstuvwxyz"
+    local digits_chars="0123456789"
+    local special_chars="@#$%"
+
+    # Construct the password
+    local password=$(cat /dev/urandom | tr -dc "${upper_chars}${lower_chars}${digits_chars}${special_chars}" | fold -w ${length} | head -n 1)
+
+    # Ensure the password contains at least one character of each required type
+    password=$(echo $password | sed "s/./$(echo $upper_chars | fold -w1 | shuf | head -n1)/$num_upper")
+    password=$(echo $password | sed "s/./$(echo $lower_chars | fold -w1 | shuf | head -n1)/$num_lower")
+    password=$(echo $password | sed "s/./$(echo $digits_chars | fold -w1 | shuf | head -n1)/$num_digits")
+    password=$(echo $password | sed "s/./$(echo $special_chars | fold -w1 | shuf | head -n1)/$num_special")
 
     echo $password
 }
