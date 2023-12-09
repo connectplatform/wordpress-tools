@@ -9,8 +9,8 @@ echo "2. Restore a wordpress archive from another server."
 read -p "Enter your choice (1 or 2): " choice
 
 generate_password() {
-    local length=12
-    local charset='A-Za-z0-9@#%'
+    local length=16
+    local charset='A-Za-z0-9@#$%'
 
     # Generate password
     local password=$(cat /dev/urandom | tr -dc "$charset" | fold -w ${length} | head -n 1)
