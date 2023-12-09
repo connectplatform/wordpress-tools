@@ -8,6 +8,16 @@ echo "2. Restore a wordpress archive from another server."
 
 read -p "Enter your choice (1 or 2): " choice
 
+generate_password() {
+    local length=12
+    local charset='A-Za-z0-9@#%'
+
+    # Generate password
+    local password=$(cat /dev/urandom | tr -dc "$charset" | fold -w ${length} | head -n 1)
+
+    echo $password
+}
+
 case $choice in
     1)
         # Backup WordPress Site
@@ -76,7 +86,9 @@ case $choice in
     # Extract database credentials from wp-config.php using awk for consistency
     db_name=$(awk -F"'" '/DB_NAME/{print $4}' wp-config.php)
     db_user=$(awk -F"'" '/DB_USER/{print $4}' wp-config.php)
-    db_password=$(openssl rand -base64 12 | tr -dc 'A-Za-z0-9@#%')
+
+    # Generate a complex password using the defined function
+    db_password=$(generate_password)
 
     db_host=$(awk -F"'" '/DB_HOST/{print $4}' wp-config.php | cut -d ":" -f 1)
     db_port=$(awk -F"'" '/DB_HOST/{print $4}' wp-config.php | cut -d ":" -f 2 | tr -d "'")
