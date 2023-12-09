@@ -65,18 +65,25 @@ case $choice in
         # Extract the backup contents
         tar -xzvf "${sitename}.tar.gz"
 
-        # Extract database credentials from wp-config.php
-        db_name=$(grep DB_NAME wp-config.php | cut -d "'" -f 4)
-        db_user=$(grep DB_USER wp-config.php | cut -d "'" -f 4)
-        db_password=$(grep DB_PASSWORD wp-config.php | cut -d "'" -f 4)
-        db_host=$(grep DB_HOST wp-config.php | cut -d "'" -f 4)
+        # Extract database credentials from wp-config.php using awk for consistency
+        db_name=$(awk -F"'" '/DB_NAME/{print $4}' wp-config.php)
+        db_user=$(awk -F"'" '/DB_USER/{print $4}' wp-config.php)
+        db_password=$(awk -F"'" '/DB_PASSWORD/{print $4}' wp-config.php)
+        db_host=$(awk -F"'" '/DB_HOST/{print $4}' wp-config.php | cut -d ":" -f 1)
+        db_port=$(awk -F"'" '/DB_HOST/{print $4}' wp-config.php | cut -d ":" -f 2 | tr -d "'")
+
+        # Check if a port number is available
+        if [ -z "$db_port" ]; then
+            # No port number found, default to 3306
+            db_port=3306
+        fi
 
         # Ask for MySQL root password
         read -sp "Enter MySQL root password for $db_host: " root_password
         echo ""
 
         # Log in to MySQL and create the database, user, and assign privileges
-        mysql -u root -p$root_password -h $db_host -e "
+        mysql -u root -p$root_password -h $db_host -P $db_port -e "
         CREATE DATABASE IF NOT EXISTS $db_name;
         CREATE USER IF NOT EXISTS '$db_user'@'%' IDENTIFIED BY '$db_password';
         GRANT ALL PRIVILEGES ON $db_name.* TO '$db_user'@'%';
@@ -86,7 +93,7 @@ case $choice in
         tar -xzvf db_backup.tar.gz
 
         # Import the database
-        mysql -u $db_user -p$db_password $db_name < db_backup.sql
+        mysql -u $db_user -p$db_password -h $db_host -P $db_port $db_name < db_backup.sql
 
         # Delete the downloaded and extracted backup files
         rm "${sitename}.tar.gz" db_backup.tar.gz
