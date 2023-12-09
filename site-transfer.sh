@@ -54,61 +54,79 @@ case $choice in
             echo "Failed to dump database, please check the credentials and try again."
         fi
         ;;
-       2)
-        # Restore WordPress Site
-        echo "This script needs to be launched in the public www directory of the website we are about to restore on a new server."
-        read -p "Enter website URL that you are transferring (without https://): " sitename
+2)
+    # Restore WordPress Site
+    echo "This script needs to be launched in the public www directory of the website we are about to restore on a new server."
+    read -p "Enter website URL that you are transferring (without https://): " sitename
 
-        # Download the backup
-        wget "https://${sitename}/${sitename}.tar.gz"
+    # Download the backup
+    wget "https://${sitename}/${sitename}.tar.gz"
+    if [ $? -ne 0 ]; then
+        echo "Failed to download backup. Exiting."
+        exit 1
+    fi
 
-        # Extract the backup contents
-        tar -xzvf "${sitename}.tar.gz"
+    # Extract the backup contents
+    tar -xzvf "${sitename}.tar.gz"
+    if [ $? -ne 0 ]; then
+        echo "Failed to extract backup. Exiting."
+        exit 1
+    fi
 
-        # Extract database credentials from wp-config.php using awk for consistency
-        db_name=$(awk -F"'" '/DB_NAME/{print $4}' wp-config.php)
-        db_user=$(awk -F"'" '/DB_USER/{print $4}' wp-config.php)
+    # Extract database credentials from wp-config.php using awk for consistency
+    db_name=$(awk -F"'" '/DB_NAME/{print $4}' wp-config.php)
+    db_user=$(awk -F"'" '/DB_USER/{print $4}' wp-config.php)
+    db_password=$(openssl rand -base64 12 | tr -dc 'A-Za-z0-9@#%')
 
-        # Generate a complex password
-        db_password=$(openssl rand -base64 12 | tr -dc 'A-Za-z0-9@#%')
+    db_host=$(awk -F"'" '/DB_HOST/{print $4}' wp-config.php | cut -d ":" -f 1)
+    db_port=$(awk -F"'" '/DB_HOST/{print $4}' wp-config.php | cut -d ":" -f 2 | tr -d "'")
 
-        db_host=$(awk -F"'" '/DB_HOST/{print $4}' wp-config.php | cut -d ":" -f 1)
-        db_port=$(awk -F"'" '/DB_HOST/{print $4}' wp-config.php | cut -d ":" -f 2 | tr -d "'")
+    # Check if a port number is available
+    if [ -z "$db_port" ]; then
+        # No port number found, default to 3306
+        db_port=3306
+    fi
 
-        # Check if a port number is available
-        if [ -z "$db_port" ]; then
-            # No port number found, default to 3306
-            db_port=3306
-        fi
+    # Ask for MySQL root password
+    read -sp "Enter MySQL root password for $db_host: " root_password
+    echo ""
 
-        # Ask for MySQL root password
-        read -sp "Enter MySQL root password for $db_host: " root_password
-        echo ""
+    # Log in to MySQL and create the database, user, and assign privileges
+    mysql -u root -p$root_password -h $db_host -P $db_port -e "
+    CREATE DATABASE IF NOT EXISTS $db_name;
+    CREATE USER IF NOT EXISTS '$db_user'@'%' IDENTIFIED BY '$db_password';
+    GRANT ALL PRIVILEGES ON $db_name.* TO '$db_user'@'%';
+    FLUSH PRIVILEGES;"
+    if [ $? -ne 0 ]; then
+        echo "Failed to create database or user. Exiting."
+        exit 1
+    fi
 
-        # Log in to MySQL and create the database, user, and assign privileges
-        mysql -u root -p$root_password -h $db_host -P $db_port -e "
-        CREATE DATABASE IF NOT EXISTS $db_name;
-        CREATE USER IF NOT EXISTS '$db_user'@'%' IDENTIFIED BY '$db_password';
-        GRANT ALL PRIVILEGES ON $db_name.* TO '$db_user'@'%';
-        FLUSH PRIVILEGES;"
+    # Update the wp-config.php with the new DB password
+    sed -i "s/define('DB_PASSWORD', '.*')/define('DB_PASSWORD', '$db_password')/" wp-config.php
+    if [ $? -ne 0 ]; then
+        echo "Failed to update wp-config.php. Exiting."
+        exit 1
+    fi
 
-        # Extract the database backup
-        tar -xzvf db_backup.tar.gz
+    # Extract the database backup
+    tar -xzvf db_backup.tar.gz
 
-        # Import the database
-        mysql -u $db_user -p$db_password -h $db_host -P $db_port $db_name < db_backup.sql
+    # Import the database
+    mysql -u $db_user -p$db_password -h $db_host -P $db_port $db_name < db_backup.sql
+    if [ $? -ne 0 ]; then
+        echo "Failed to import database. Exiting."
+        exit 1
+    fi
 
-        # Update the wp-config.php with the new DB password
-        sed -i "s/define('DB_PASSWORD', '.*')/define('DB_PASSWORD', '$db_password')/" wp-config.php
+    # Delete the downloaded and extracted backup files
+    rm "${sitename}.tar.gz" db_backup.tar.gz
 
-        # Delete the downloaded and extracted backup files
-        rm "${sitename}.tar.gz" db_backup.tar.gz
+    # Remove the uncompressed database dump
+    rm db_backup.sql
 
-        # Remove the uncompressed database dump
-        rm db_backup.sql
-
-        echo "Restoration of $sitename completed."
-        ;;
+    echo "Restoration of $sitename completed."
+    ;;
     *)
         echo "Invalid option, select 1 or 2"
         read -p "Press any key to continue..." key
