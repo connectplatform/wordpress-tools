@@ -129,10 +129,19 @@ case $choice in
         exit 1
     fi
 
-    # Update the wp-config.php with the new DB password
-    sed -i "s/define('DB_PASSWORD', '.*')/define('DB_PASSWORD', '$db_password')/" wp-config.php
+    # Update the wp-config.php with the new DB password and user
+    # Using | as a delimiter and escaping & and / characters in the password
+    escaped_db_password=$(printf '%s\n' "$db_password" | sed -e 's/[\/&]/\\&/g')
+    sed -i "s|define('DB_PASSWORD', '.*')|define('DB_PASSWORD', '$escaped_db_password')|" wp-config.php
     if [ $? -ne 0 ]; then
-        echo "Failed to update wp-config.php. Exiting."
+        echo "Failed to update DB_PASSWORD in wp-config.php. Exiting."
+        exit 1
+    fi
+
+    escaped_db_user=$(printf '%s\n' "$db_user" | sed -e 's/[\/&]/\\&/g')
+    sed -i "s|define('DB_USER', '.*')|define('DB_USER', '$escaped_db_user')|" wp-config.php
+    if [ $? -ne 0 ]; then
+        echo "Failed to update DB_USER in wp-config.php. Exiting."
         exit 1
     fi
 
