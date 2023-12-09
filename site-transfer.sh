@@ -84,6 +84,9 @@ case $choice in
     echo "This script needs to be launched in the public www directory of the website we are about to restore on a new server."
     read -p "Enter website URL that you are transferring (without https://): " sitename
 
+    # Extract sitename without extension
+    db_name=$(echo $sitename | awk -F. '{print $1}')
+
     # Download the backup
     wget "https://${sitename}/${sitename}.tar.gz"
     if [ $? -ne 0 ]; then
@@ -107,6 +110,13 @@ case $choice in
 
     db_host=$(awk -F"'" '/DB_HOST/{print $4}' wp-config.php | cut -d ":" -f 1)
     db_port=$(awk -F"'" '/DB_HOST/{print $4}' wp-config.php | cut -d ":" -f 2 | tr -d "'")
+
+    # Update the wp-config.php with the new DB_NAME
+    sed -i "s|define('DB_NAME', '.*')|define('DB_NAME', '$db_name')|" wp-config.php
+    if [ $? -ne 0 ]; then
+        echo "Failed to update DB_NAME in wp-config.php. Exiting."
+        exit 1
+    fi
 
     # Check if a port number is available
     if [ -z "$db_port" ]; then
