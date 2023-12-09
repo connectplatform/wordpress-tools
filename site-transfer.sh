@@ -54,7 +54,7 @@ case $choice in
             echo "Failed to dump database, please check the credentials and try again."
         fi
         ;;
-    2)
+       2)
         # Restore WordPress Site
         echo "This script needs to be launched in the public www directory of the website we are about to restore on a new server."
         read -p "Enter website URL that you are transferring (without https://): " sitename
@@ -68,7 +68,10 @@ case $choice in
         # Extract database credentials from wp-config.php using awk for consistency
         db_name=$(awk -F"'" '/DB_NAME/{print $4}' wp-config.php)
         db_user=$(awk -F"'" '/DB_USER/{print $4}' wp-config.php)
-        db_password=$(awk -F"'" '/DB_PASSWORD/{print $4}' wp-config.php)
+
+        # Generate a complex password
+        db_password=$(openssl rand -base64 12 | tr -dc 'A-Za-z0-9@#%')
+
         db_host=$(awk -F"'" '/DB_HOST/{print $4}' wp-config.php | cut -d ":" -f 1)
         db_port=$(awk -F"'" '/DB_HOST/{print $4}' wp-config.php | cut -d ":" -f 2 | tr -d "'")
 
@@ -94,6 +97,9 @@ case $choice in
 
         # Import the database
         mysql -u $db_user -p$db_password -h $db_host -P $db_port $db_name < db_backup.sql
+
+        # Update the wp-config.php with the new DB password
+        sed -i "s/define('DB_PASSWORD', '.*')/define('DB_PASSWORD', '$db_password')/" wp-config.php
 
         # Delete the downloaded and extracted backup files
         rm "${sitename}.tar.gz" db_backup.tar.gz
