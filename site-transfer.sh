@@ -84,9 +84,6 @@ case $choice in
     echo "This script needs to be launched in the public www directory of the website we are about to restore on a new server."
     read -p "Enter website URL that you are transferring (without https://): " sitename
 
-    # Extract sitename without extension
-    db_name=$(echo $sitename | awk -F. '{print $1}')
-
     # Download the backup
     wget "https://${sitename}/${sitename}.tar.gz"
     if [ $? -ne 0 ]; then
@@ -108,17 +105,8 @@ case $choice in
     # Generate a complex password using the defined function
     db_password=$(generate_password)
 
-    echo "Updating wp-config.php with the new database credentials"
-
     db_host=$(awk -F"'" '/DB_HOST/{print $4}' wp-config.php | cut -d ":" -f 1)
     db_port=$(awk -F"'" '/DB_HOST/{print $4}' wp-config.php | cut -d ":" -f 2 | tr -d "'")
-
-    # Update the wp-config.php with the new DB_NAME
-    sed -i "s|define('DB_NAME', '.*')|define('DB_NAME', '$db_name')|" wp-config.php
-    if [ $? -ne 0 ]; then
-        echo "Failed to update DB_NAME in wp-config.php. Exiting."
-        exit 1
-    fi
 
     # Check if a port number is available
     if [ -z "$db_port" ]; then
@@ -141,16 +129,24 @@ case $choice in
         exit 1
     fi
 
-    # Debugging: Check current DB_USER and DB_PASSWORD in wp-config.php
-    echo "Current DB_USER and DB_PASSWORD:"
-    grep "DB_USER" wp-config.php
-    grep "DB_PASSWORD" wp-config.php
+    echo "Updating wp-config.php with the new database credentials"
 
-    # Update the wp-config.php with the new DB user and password
-    sed -i "s|define('DB_USER', '.*');|define('DB_USER', '$db_user');|" wp-config.php
-    sed -i "s|define('DB_PASSWORD', '.*');|define('DB_PASSWORD', '$db_password');|" wp-config.php
+    # Read wp-config.php and replace DB_USER and DB_PASSWORD, then save to temp file
+    temp_wp_config="wp-config-temp.php"
+    while IFS= read -r line; do
+        if [[ "$line" == "define( 'DB_USER',"* ]]; then
+            echo "define( 'DB_USER', '$db_user' );" >> "$temp_wp_config"
+        elif [[ "$line" == "define( 'DB_PASSWORD',"* ]]; then
+            echo "define( 'DB_PASSWORD', '$db_password' );" >> "$temp_wp_config"
+        else
+            echo "$line" >> "$temp_wp_config"
+        fi
+    done < wp-config.php
 
-    # Debugging: Check if DB_USER and DB_PASSWORD have been updated in wp-config.php
+    # Replace the original wp-config.php with the temp file
+    mv "$temp_wp_config" wp-config.php
+
+    # Check if DB_USER and DB_PASSWORD have been updated in wp-config.php
     echo "Updated DB_USER and DB_PASSWORD:"
     grep "DB_USER" wp-config.php
     grep "DB_PASSWORD" wp-config.php
