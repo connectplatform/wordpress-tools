@@ -146,10 +146,9 @@ case $choice in
     grep "DB_USER" wp-config.php
     grep "DB_PASSWORD" wp-config.php
 
-    # Update the wp-config.php with the new DB password and user
-    # Using | as a delimiter
-    sed -i "s|define('DB_USER', '.*')|define('DB_USER', '$db_user')|" wp-config.php
-    sed -i "s|define('DB_PASSWORD', '.*')|define('DB_PASSWORD', '$db_password')|" wp-config.php
+    # Update the wp-config.php with the new DB user and password
+    sed -i "s|define('DB_USER', '.*');|define('DB_USER', '$db_user');|" wp-config.php
+    sed -i "s|define('DB_PASSWORD', '.*');|define('DB_PASSWORD', '$db_password');|" wp-config.php
 
     # Debugging: Check if DB_USER and DB_PASSWORD have been updated in wp-config.php
     echo "Updated DB_USER and DB_PASSWORD:"
