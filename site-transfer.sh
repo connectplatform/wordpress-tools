@@ -103,7 +103,9 @@ case $choice in
         name=$(echo $name | sed "s/./$(echo $lower_chars | fold -w1 | shuf | head -n1)/$num_lower")
         name=$(echo $name | sed "s/./$(echo $digits_chars | fold -w1 | shuf | head -n1)/$num_digits")
 
+        echo $name
     }
+
     generate_password() {
         local length=16
         local num_upper=1
@@ -126,6 +128,7 @@ case $choice in
         password=$(echo $password | sed "s/./$(echo $digits_chars | fold -w1 | shuf | head -n1)/$num_digits")
         password=$(echo $password | sed "s/./$(echo $special_chars | fold -w1 | shuf | head -n1)/$num_special")
 
+        echo $password
     }
     
     # Generate a user name and update wp-config.php
