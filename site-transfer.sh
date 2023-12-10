@@ -118,9 +118,9 @@ case $choice in
     db_password=$(generate_password)
 
     # Update wp-config.php
-    sed -i "s|define('DB_NAME', '.*');|define('DB_NAME', '$db_name');|" wp-config.php
-    sed -i "s|define('DB_USER', '.*');|define('DB_USER', '$db_user');|" wp-config.php
-    sed -i "s|define('DB_PASSWORD', '.*');|define('DB_PASSWORD', '$db_password');|" wp-config.php
+    sed -i "s/define( 'DB_NAME', .*/define( 'DB_NAME', '$db_name' );/" wp-config.php
+    sed -i "s/define( 'DB_USER', .*/define( 'DB_USER', '$db_user' );/" wp-config.php
+    sed -i "s/define( 'DB_PASSWORD', .*/define( 'DB_PASSWORD', '$db_password' );/" wp-config.php
 
     # Debugging: Check if DB_NAME, DB_USER, and DB_PASSWORD have been updated in wp-config.php
     echo "New DB_NAME, DB_USER, and DB_PASSWORD:"
