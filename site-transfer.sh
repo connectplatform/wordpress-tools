@@ -8,6 +8,32 @@ echo "2. Restore a wordpress archive from another server."
 
 read -p "Enter your choice (1 or 2): " choice
 
+# Generate mysql credentials to comply with security requirements
+
+generate_name() {
+    local length=8
+    local num_lower=1
+    local num_digits=1
+    local lower_chars="abcdefghijklmnopqrstuvwxyz"
+    local digits_chars="0123456789"
+    local name=$(cat /dev/urandom | tr -dc "${lower_chars}${digits_chars}" | fold -w ${length} | head -n 1)
+    echo $name
+}
+
+generate_password() {
+    local length=16
+    local num_upper=1
+    local num_lower=1
+    local num_digits=1
+    local num_special=1
+    local upper_chars="ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    local lower_chars="abcdefghijklmnopqrstuvwxyz"
+    local digits_chars="0123456789"
+    local special_chars="@#$%"
+    local password=$(cat /dev/urandom | tr -dc "${upper_chars}${lower_chars}${digits_chars}${special_chars}" | fold -w ${length} | head -n 1)
+    echo $password
+}
+
 case $choice in
     1)
         # Backup WordPress Site
@@ -85,79 +111,21 @@ case $choice in
     grep "DB_PASSWORD" wp-config.php
 
     echo "Updating wp-config.php with the new database credentials"
-
-    # Generate mysql credentials to comply with security requirements
-    generate_name() {
-        local length=8
-        local num_lower=1
-        local num_digits=1
-
-        # Required character sets
-        local lower_chars="abcdefghijklmnopqrstuvwxyz"
-        local digits_chars="0123456789"
-
-        # Construct the name
-        local name=$(cat /dev/urandom | tr -dc "${lower_chars}${digits_chars}" | fold -w ${length} | head -n 1)
-
-        # Ensure the password contains at least one character of each required type
-        name=$(echo $name | sed "s/./$(echo $lower_chars | fold -w1 | shuf | head -n1)/$num_lower")
-        name=$(echo $name | sed "s/./$(echo $digits_chars | fold -w1 | shuf | head -n1)/$num_digits")
-
-        echo $name
-    }
-
-    generate_password() {
-        local length=16
-        local num_upper=1
-        local num_lower=1
-        local num_digits=1
-        local num_special=1
-
-        # Required character sets
-        local upper_chars="ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        local lower_chars="abcdefghijklmnopqrstuvwxyz"
-        local digits_chars="0123456789"
-        local special_chars="@#$%"
-
-        # Construct the password
-        local password=$(cat /dev/urandom | tr -dc "${upper_chars}${lower_chars}${digits_chars}${special_chars}" | fold -w ${length} | head -n 1)
-
-        # Ensure the password contains at least one character of each required type
-        password=$(echo $password | sed "s/./$(echo $upper_chars | fold -w1 | shuf | head -n1)/$num_upper")
-        password=$(echo $password | sed "s/./$(echo $lower_chars | fold -w1 | shuf | head -n1)/$num_lower")
-        password=$(echo $password | sed "s/./$(echo $digits_chars | fold -w1 | shuf | head -n1)/$num_digits")
-        password=$(echo $password | sed "s/./$(echo $special_chars | fold -w1 | shuf | head -n1)/$num_special")
-
-        echo $password
-    }
     
-    # Generate a user name and update wp-config.php
+    # Generate new credentials
     db_name=$(generate_name)
-    sed -i "s|define('DB_NAME', '.*');|define('DB_NAME', '$db_name');|" wp-config.php
-    if [ $? -ne 0 ]; then
-        echo "Failed to update DB_NAME in wp-config.php. Exiting."
-        exit 1
-    fi
-
-    # Generate a user name and update wp-config.php
     db_user=$(generate_name)
-    sed -i "s|define('DB_USER', '.*');|define('DB_USER', '$db_user');|" wp-config.php
-    if [ $? -ne 0 ]; then
-        echo "Failed to update DB_USER in wp-config.php. Exiting."
-        exit 1
-    fi
-
-    # Generate a complex password and update wp-config.php
     db_password=$(generate_password)
-    sed -i "s|define('DB_PASSWORD', '.*');|define('DB_PASSWORD', '$db_password');|" wp-config.php
-    if [ $? -ne 0 ]; then
-        echo "Failed to update DB_PASSWORD in wp-config.php. Exiting."
-        exit 1
-    fi
 
-    # Debugging: Check if DB_NAME and DB_USER have been updated in wp-config.php
-    echo "New DB_NAME and DB_USER:"
+    # Update wp-config.php
+    sed -i "s|define('DB_NAME', '.*');|define('DB_NAME', '$db_name');|" wp-config.php
+    sed -i "s|define('DB_USER', '.*');|define('DB_USER', '$db_user');|" wp-config.php
+    sed -i "s|define('DB_PASSWORD', '.*');|define('DB_PASSWORD', '$db_password');|" wp-config.php
+
+    # Debugging: Check if DB_NAME, DB_USER, and DB_PASSWORD have been updated in wp-config.php
+    echo "New DB_NAME, DB_USER, and DB_PASSWORD:"
     grep "DB_NAME" wp-config.php
+    grep "DB_USER" wp-config.php
     grep "DB_PASSWORD" wp-config.php
 
     # Check if a port number is available
