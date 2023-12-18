@@ -61,7 +61,25 @@ case $choice in
     # Check if mysqldump was successful
     if [ $? -eq 0 ]; then
         echo "Database dumped successfully."
-        # ...
+
+        # Extract the site name from the SQL dump file
+        # This command assumes that the 'siteurl' is stored in a standard format in the SQL dump
+        sitename=$(grep "siteurl" db_backup.sql | awk -F"'" '{print $4}' | head -1 | awk -F"/" '{print $3}')
+
+        # Compress the database dump
+        tar -czvf db_backup.tar.gz db_backup.sql
+
+        # Remove the uncompressed database dump
+        rm db_backup.sql
+
+        # Compress the entire WordPress directory, excluding the tarball itself
+        echo "Compressing files, please wait..."
+        tar --exclude="${sitename}.tar.gz" --exclude="site-transfer.sh" -czf "${sitename}.tar.gz" .
+
+        # Delete the database archive after successful creation of sitename.tar.gz
+        rm db_backup.tar.gz
+
+        echo "Backup of $sitename completed."
     else
         echo "Failed to dump database, please check the credentials and try again."
     fi
