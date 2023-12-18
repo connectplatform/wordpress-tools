@@ -90,7 +90,7 @@ case $choice in
     read -p "Enter website URL that you are transferring (without https://): " sitename
 
     # Download the backup
-    wget "https://${sitename}/${sitename}.tar.gz"
+    wget "https://${sitename}/${sitename}.tar.gz" --no-check-certificate
     if [ $? -ne 0 ]; then
         echo "Failed to download backup. Exiting."
         exit 1
