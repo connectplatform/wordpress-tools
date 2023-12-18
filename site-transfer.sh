@@ -106,13 +106,23 @@ case $choice in
     # Extract database credentials from wp-config.php using awk for consistency
     db_name=$(awk -F"'" '/DB_NAME/{print $4}' wp-config.php)
     db_user=$(awk -F"'" '/DB_USER/{print $4}' wp-config.php)
-    db_host=$(awk -F"'" '/DB_HOST/{print $4}' wp-config.php | cut -d ":" -f 1)
-    db_port=$(awk -F"'" '/DB_HOST/{print $4}' wp-config.php | cut -d ":" -f 2 | tr -d "'")
+    db_host_and_port=$(awk -F"'" '/DB_HOST/{print $4}' wp-config.php)
 
-    # Debugging: Check current DB_USER and DB_PASSWORD in wp-config.php
-    echo "Old DB_USER and DB_PASSWORD:"
-    grep "DB_USER" wp-config.php
-    grep "DB_PASSWORD" wp-config.php
+    # Separate host and port if port is specified
+    IFS=':' read -ra ADDR <<< "$db_host_and_port"
+    db_host=${ADDR[0]}
+    db_port=${ADDR[1]}
+
+    # Check if a port number is available
+    port_param=""
+    if [ ! -z "$db_port" ]; then
+        port_param="-P $db_port"
+    fi
+
+    # Debugging: Enable to view old DB_USER and DB_PASSWORD in wp-config.php
+    # echo "Old DB_USER and DB_PASSWORD:"
+    # grep "DB_USER" wp-config.php
+    # grep "DB_PASSWORD" wp-config.php
 
     echo "Updating wp-config.php with the new database credentials"
     
@@ -126,11 +136,11 @@ case $choice in
     sed -i "s/define( 'DB_USER', .*/define( 'DB_USER', '$db_user' );/" wp-config.php
     sed -i "s/define( 'DB_PASSWORD', .*/define( 'DB_PASSWORD', '$db_password' );/" wp-config.php
 
-    # Debugging: Check if DB_NAME, DB_USER, and DB_PASSWORD have been updated in wp-config.php
-    echo "New DB_NAME, DB_USER, and DB_PASSWORD:"
-    grep "DB_NAME" wp-config.php
-    grep "DB_USER" wp-config.php
-    grep "DB_PASSWORD" wp-config.php
+    # Debugging: Enable to see if DB_NAME, DB_USER, and DB_PASSWORD have been updated in wp-config.php
+    # echo "New DB_NAME, DB_USER, and DB_PASSWORD:"
+    # grep "DB_NAME" wp-config.php
+    # grep "DB_USER" wp-config.php
+    # grep "DB_PASSWORD" wp-config.php
 
     # Check if a port number is available
     if [ -z "$db_port" ]; then
@@ -143,7 +153,7 @@ case $choice in
     echo ""
 
     # Log in to MySQL and create the database, user, and assign privileges
-    mysql -u root -p$root_password -h $db_host -P $db_port -e "
+    mysql -u root -p$root_password -h $db_host $port_param -e "
     CREATE DATABASE IF NOT EXISTS $db_name;
     CREATE USER IF NOT EXISTS '$db_user'@'%' IDENTIFIED BY '$db_password';
     GRANT ALL PRIVILEGES ON $db_name.* TO '$db_user'@'%';
