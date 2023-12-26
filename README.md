@@ -54,21 +54,21 @@ The `optimize-db.sh` script is designed to automatically optimize all tables in 
 ### Usage
 
 1. **Download the Script:**
-   Download `optimize-db.sh` to the root directory of your WordPress installation (where `wp-config.php` is located).
+   Download `db-optimizer.sh` to the root directory of your WordPress installation (where `wp-config.php` is located).
 
    ```sh
-   wget https://raw.githubusercontent.com/connectplatform/wordpress-tools/main/optimize-db.sh && chmod +x optimize-db.sh
+   wget https://raw.githubusercontent.com/connectplatform/wordpress-tools/main/db-optimizer.sh && chmod +x db-optimizer.sh
    ```
 
 2. **Run the Script:**
 
    ```sh
-   ./optimize-db.sh
+   ./db-optimizer.sh
    ```
 
 ### Scheduling with Cron
 
-To automate the database optimization process, you can schedule the `optimize-db.sh` script to run at a specific time using cron. For example, to run the script at 5 AM every three days, you would add the following cron job:
+To automate the database optimization process, you can schedule the `db-optimizer.sh` script to run at a specific time using cron. For example, to run the script at 5 AM every three days, you would add the following cron job:
 
 1. Open your crontab for editing:
 
@@ -79,7 +79,7 @@ To automate the database optimization process, you can schedule the `optimize-db
 2. Add the following line to the crontab file (use 'crontab -e' to edit crontab):
 
    ```sh
-   0 5 */3 * * /path/to/wordpress/optimize-db.sh
+   0 5 */3 * * /path/to/wordpress/db-optimizer.sh
    ```
    Replace /path/to/wordpress/ with the actual path to your WordPress installation directory.
 
