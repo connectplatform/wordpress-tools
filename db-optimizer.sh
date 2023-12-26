@@ -21,7 +21,10 @@ if [ ! -z "$db_port" ]; then
     port_param="-P $db_port"
 fi
 
-# Connect to the MySQL database and perform optimization
-mysql -h "$db_host" $port_param -u "$db_user" -p"$db_password" -D "$db_name" -e "OPTIMIZE TABLE $(mysql -h "$db_host" $port_param -u "$db_user" -p"$db_password" -D "$db_name" -e 'SHOW TABLES;' | awk '{ print $1}' | grep -v '^Tables' | tr '\n' ',' | sed 's/,$//')"
+# Connect to the MySQL database and perform optimization, only show errors
+mysql -h "$db_host" -P "$db_port" -u "$db_user" -p"$db_password" -D "$db_name" \
+-e "OPTIMIZE TABLE $(mysql -h "$db_host" -P "$db_port" -u "$db_user" -p"$db_password" \
+-D "$db_name" -e 'SHOW TABLES;' | awk '{ print $1}' | grep -v '^Tables' | \
+tr '\n' ',' | sed 's/,$//')" 2>&1 | grep -v 'note'
 
 echo "MySQL Database Optimization Completed."
