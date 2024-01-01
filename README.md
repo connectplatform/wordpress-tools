@@ -98,4 +98,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Authors
 
-Ray Sorkin [LinkedIn](https://linkedin.com/in/raysorkin)
+Ray Sorkin [LinkedIn](https://linkedin.com/in/raysorkin) [Twitter](https://twitter.com/ray_sorkin)
