@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# Script to perform MySQL database optimization
+# Script to perform MySQL database optimization and repair
 
-echo "Starting MySQL Database Optimization."
+echo "Starting MySQL Database Optimization and Repair."
 
 # Extract database credentials from wp-config.php
 db_name=$(awk -F"'" '/DB_NAME/{print $4}' wp-config.php)
@@ -21,10 +21,16 @@ if [ ! -z "$db_port" ]; then
     port_param="-P $db_port"
 fi
 
-# Connect to the MySQL database and perform optimization, only show errors
-mysql -h "$db_host" -P "$db_port" -u "$db_user" -p"$db_password" -D "$db_name" \
--e "OPTIMIZE TABLE $(mysql -h "$db_host" -P "$db_port" -u "$db_user" -p"$db_password" \
--D "$db_name" -e 'SHOW TABLES;' | awk '{ print $1}' | grep -v '^Tables' | \
-tr '\n' ',' | sed 's/,$//')" 2>&1 | grep -v 'note'
+# Get the list of tables
+tables=$(mysql -h "$db_host" $port_param -u "$db_user" -p"$db_password" -D "$db_name" -e 'SHOW TABLES;' | awk '{ print $1}' | grep -v '^Tables')
 
-echo "MySQL Database Optimization Completed."
+# Repair and optimize each table
+for table in $tables; do
+    echo "Repairing table: $table"
+    mysql -h "$db_host" $port_param -u "$db_user" -p"$db_password" -D "$db_name" -e "REPAIR TABLE $table"
+    
+    echo "Optimizing table: $table"
+    mysql -h "$db_host" $port_param -u "$db_user" -p"$db_password" -D "$db_name" -e "OPTIMIZE TABLE $table"
+done
+
+echo "MySQL Database Optimization and Repair Completed."
