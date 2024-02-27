@@ -113,7 +113,7 @@ This script performs the following operations:
    - Make the script executable:
 
      ```sh
-      wget https://raw.githubusercontent.com/connectplatform/wordpress-tools/main/myisam2innodb.sh && chmod +x myisam2innodb.sh
+      wget https://github.com/connectplatform/wordpress-tools/raw/main/myisam2innodb.sh && chmod +x myisam2innodb.sh
      ```
 
 2. **Execute the Script:**
