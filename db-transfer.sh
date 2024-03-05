@@ -56,19 +56,23 @@ case $choice in
     fi
 
     # Prepare parameters for mysqldump
-    mysqldump_params="-u $db_user -p'$db_password' $db_name"
+    mysqldump_params="-u $db_user --password='$db_password' $db_name"
 
-    # Include host, port, or socket in mysqldump command as appropriate
-    if [ ! -z "$db_port" ]; then
-        mysqldump_params="$mysqldump_params -h $db_host -P $db_port"
-    elif [ ! -z "$db_socket" ]; then
-        mysqldump_params="$mysqldump_params --socket=$db_socket"
+    # Check if the DB_HOST indicates a socket connection
+    if [[ "$db_host_and_port" == *"/"* ]]; then
+    # It's a socket connection, extract the socket path
+    db_socket="${db_host_and_port#*:}"
+    mysqldump_params="$mysqldump_params --socket=$db_socket"
+    elif [ ! -z "$db_port" ]; then
+    # It's a network connection with a specified port
+    mysqldump_params="$mysqldump_params -h $db_host -P $db_port"
     else
-        mysqldump_params="$mysqldump_params -h $db_host"
+    # Default to host without port
+    mysqldump_params="$mysqldump_params -h $db_host"
     fi
 
-    # Dump the database
-    mysqldump $mysqldump_params > db_backup.sql
+    # Execute the mysqldump command
+    eval mysqldump $mysqldump_params > db_backup.sql
 
     # Check if mysqldump was successful
     if [ $? -eq 0 ]; then
