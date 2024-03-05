@@ -36,7 +36,7 @@ generate_password() {
 
 case $choice in
 1)
-    # Backup WordPress Site
+        # Backup WordPress Site
 
     # Extract database credentials from wp-config.php
     db_name=$(awk -F"'" '/DB_NAME/{print $4}' wp-config.php)
@@ -85,6 +85,7 @@ case $choice in
     else
         echo "Failed to dump database, please check the credentials and try again."
     fi
+    ;;
 2)
     # Restore WordPress Site
     echo "This script needs to be launched in the public www directory of the website we are about to restore on a new server."
