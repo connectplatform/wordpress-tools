@@ -4,7 +4,7 @@ echo "This script will extract, compress and transfer a Wordpress database."
 echo "Select your desired action:"
 echo "1. Backup the database of a Wordpress website in this directory."
 echo "2. Restore a wordpress archive from another server."
-echo "TODO: 
+echo "TODO:"
 
 read -p "Enter your choice (1 or 2): " choice
 
