@@ -44,19 +44,31 @@ case $choice in
     db_password=$(awk -F"'" '/DB_PASSWORD/{print $4}' wp-config.php)
     db_host_and_port=$(awk -F"'" '/DB_HOST/{print $4}' wp-config.php)
 
+    # Check if the host contains a socket path
+    if [[ "$db_host_and_port" == *"/"* ]]; then
+    db_host="localhost"
+    db_socket=$db_host_and_port
+    else
     # Separate host and port if port is specified
     IFS=':' read -ra ADDR <<< "$db_host_and_port"
     db_host=${ADDR[0]}
     db_port=${ADDR[1]}
+    fi
 
-    # Check if a port number is available
-    port_param=""
+    # Prepare parameters for mysqldump
+    mysqldump_params="-u $db_user -p'$db_password' $db_name"
+
+    # Include host, port, or socket in mysqldump command as appropriate
     if [ ! -z "$db_port" ]; then
-        port_param="-P $db_port"
+        mysqldump_params="$mysqldump_params -h $db_host -P $db_port"
+    elif [ ! -z "$db_socket" ]; then
+        mysqldump_params="$mysqldump_params --socket=$db_socket"
+    else
+        mysqldump_params="$mysqldump_params -h $db_host"
     fi
 
     # Dump the database
-    mysqldump -h "$db_host" $port_param -u "$db_user" -p"$db_password" "$db_name" > db_backup.sql
+    mysqldump $mysqldump_params > db_backup.sql
 
     # Check if mysqldump was successful
     if [ $? -eq 0 ]; then
@@ -67,23 +79,12 @@ case $choice in
         sitename=$(grep "siteurl" db_backup.sql | awk -F"'" '{print $4}' | head -1 | awk -F"/" '{print $3}')
 
         # Compress the database dump
-        tar -czvf db_backup.tar.gz db_backup.sql
+        tar -czvf "${sitename}_db_backup.tar.gz" db_backup.sql
 
-        # Remove the uncompressed database dump
-        rm db_backup.sql
-
-        # Compress the entire WordPress directory, excluding the tarball itself
-        echo "Compressing files, please wait..."
-        tar --exclude="${sitename}.tar.gz" --exclude="site-transfer.sh" -czf "${sitename}.tar.gz" .
-
-        # Delete the database archive after successful creation of sitename.tar.gz
-        rm db_backup.tar.gz
-
-        echo "Backup of $sitename completed."
+        echo "Database backup of $sitename completed."
     else
         echo "Failed to dump database, please check the credentials and try again."
     fi
-    ;;
 2)
     # Restore WordPress Site
     echo "This script needs to be launched in the public www directory of the website we are about to restore on a new server."
